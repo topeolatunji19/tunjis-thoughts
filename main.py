@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, abort
+from flask import Flask, render_template, redirect, url_for, flash, abort, request
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
@@ -13,6 +13,11 @@ from sqlalchemy.orm import Session
 from functools import wraps
 from flask_gravatar import Gravatar
 import os
+import smtplib
+
+EMAIL_ADD = os.environ.get("EMAIL_ADD")
+EMAIL_PASS = os.environ.get("EMAIL_PASS")
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = str(os.environ.get("SECRET_KEY"))
@@ -28,7 +33,6 @@ Base = declarative_base()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-
 
 gravatar = Gravatar(app,
                     size=100,
@@ -52,6 +56,7 @@ def admin_only(f):
         if current_user.id != 1:
             return abort(403)
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -95,6 +100,7 @@ class Comments(Base):
 
 engine = create_engine('sqlite:///blog.db')
 Base.metadata.create_all(engine)
+
 
 @app.route('/')
 def get_all_posts():
@@ -172,6 +178,7 @@ def show_post(post_id):
                 )
                 session.add(new_comment)
                 session.commit()
+                return redirect(url_for('show_post', post_id=post_id))
         return render_template("post.html", post=requested_post, form=form, current_user=current_user,
                                logged_in=current_user.is_authenticated)
 
@@ -181,9 +188,27 @@ def about():
     return render_template("about.html", logged_in=current_user.is_authenticated)
 
 
-@app.route("/contact")
+@app.route("/contact", methods=["GET", "POST"])
 def contact():
-    return render_template("contact.html", logged_in=current_user.is_authenticated)
+    if request.method == "POST":
+        name = request.form["name"]
+        email_address = request.form["email"]
+        phone = request.form["phone"]
+        message = request.form["message"]
+        with smtplib.SMTP("smtp.gmail.com", 587) as connection:
+            connection.starttls()
+            connection.login(user=EMAIL_ADD, password=EMAIL_PASS)
+            connection.sendmail(from_addr=EMAIL_ADD, to_addrs="topeolatunji19@gmail.com", msg=f"Subject: New Message \n\n"
+                                                                             f"Name: {name}"
+                                                                             f"\nEmail: {email_address}"
+                                                                             f"\nPhone: {phone}"
+                                                                             f"\nMessage: {message}")
+            # return redirect(url_for('get_all_posts'))
+            return render_template('contact.html', logged_in=current_user.is_authenticated,
+                                   page_head="Successfully sent your message", page_subtitle="")
+
+    return render_template("contact.html", logged_in=current_user.is_authenticated, page_head="Contact Me",
+                           page_subtitle="Have questions? I have answers.")
 
 
 @app.route("/new-post", methods=["GET", "POST"])
