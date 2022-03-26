@@ -198,7 +198,7 @@ def contact():
         with smtplib.SMTP("smtp.gmail.com", 587) as connection:
             connection.starttls()
             connection.login(user=EMAIL_ADD, password=EMAIL_PASS)
-            connection.sendmail(from_addr=EMAIL_ADD, to_addrs="topeolatunji19@gmail.com", msg=f"Subject: New Message \n\n"
+            connection.sendmail(from_addr=EMAIL_ADD, to_addrs=EMAIL_ADD, msg=f"Subject: New Message \n\n"
                                                                              f"Name: {name}"
                                                                              f"\nEmail: {email_address}"
                                                                              f"\nPhone: {phone}"
